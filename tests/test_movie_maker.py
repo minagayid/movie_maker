@@ -52,6 +52,18 @@ class MovieMakerTests(unittest.TestCase):
         errors = validate_package_dict(package)
         self.assertTrue(any("audio must contain exactly one" in error for error in errors))
 
+    def test_validator_reports_malformed_nested_json_without_raising(self):
+        self.assertEqual(validate_package_dict([]), ["package must be an object"])
+        package = MovieMaker().generate(self.spec).to_dict()
+        package["manifests"]["audio"] = None
+        package["manifests"]["edit"]["sequence"] = [None, {"scene_id": [], "shot_ids": None}]
+        package["manifests"]["shots"]["items"] = [None, {"shot_id": [], "scene_id": {}, "duration_seconds": True}]
+        errors = validate_package_dict(package)
+        self.assertTrue(any("audio must be an object" in error for error in errors))
+        self.assertTrue(any("edit item 0 must be an object" in error for error in errors))
+        self.assertTrue(any("shot item 0 must be an object" in error for error in errors))
+        self.assertTrue(any("positive integer duration" in error for error in errors))
+
     def test_cli_writes_and_validates_artifacts(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
